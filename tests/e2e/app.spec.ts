@@ -1,0 +1,243 @@
+import { expect, test } from '@playwright/test'
+import { startStaticServer } from './static-server'
+
+test('root practice, wrong answer, hints and completion', async ({ page }) => {
+  await page.goto('./#/practice/shape')
+  await expect(page.getByTestId('practice-character')).toHaveText('口')
+  const answer = page.getByLabel('輸入字根答案', { exact: true })
+  await answer.fill('x')
+  await expect(page.locator('#answer-feedback')).toContainText('再試一次')
+  await page.getByRole('button', { name: '給我一點提示' }).click()
+  await expect(page.locator('.hint-note')).toContainText('四個角')
+  await answer.fill('O')
+  await expect(page.getByTestId('practice-character')).toHaveText('工')
+  for (let i = 1; i < 10; i++) {
+    await page.getByRole('button', { name: '先跳過' }).click()
+    await page.getByRole('button', { name: i === 9 ? '看結果' : '下一題', exact: true }).click()
+  }
+  await expect(page.getByRole('heading', { name: '手感，又多了一點。' })).toBeVisible()
+  await page.getByRole('button', { name: '查看我的字本' }).click()
+  await expect(page).toHaveURL(/#\/notebook/)
+  await expect(page.locator('.note-card')).toHaveCount(8)
+  await page.reload()
+  await expect(page.locator('.note-card')).toHaveCount(8)
+})
+
+test('all six route categories and complete word practice', async ({ page }) => {
+  await page.goto('./#/practice/shape')
+  for (const [category, glyph] of [
+    ['音', '米'],
+    ['義', '水'],
+    ['詞語', '日'],
+    ['成語', '一'],
+    ['文章', '早'],
+  ]) {
+    await page
+      .getByRole('group', { name: '練習分類' })
+      .getByRole('button', { name: new RegExp(`^${category}`) })
+      .click()
+    await expect(page.getByTestId('practice-character')).toHaveText(glyph!)
+  }
+  await page.goto('./#/practice/words')
+  await page.reload()
+  const answer = page.getByLabel('輸入字根答案', { exact: true })
+  await answer.fill('do')
+  await expect(page.getByTestId('practice-character')).toHaveText('月')
+  await answer.fill('ue')
+  await expect(page.locator('.completion-stats')).toContainText('100')
+})
+
+test('Chinese composition auto-checks only after selection is committed', async ({ page }) => {
+  await page.goto('./#/practice/words')
+  await page.getByRole('button', { name: '中文字', exact: true }).click()
+  const answer = page.getByLabel('輸入中文字答案', { exact: true })
+  await answer.dispatchEvent('compositionstart')
+  await answer.fill('日')
+  await answer.dispatchEvent('keydown', { key: 'Enter', isComposing: true })
+  await expect(page.locator('#answer-feedback')).not.toContainText('答對了')
+  await page.waitForTimeout(650)
+  await expect(page.getByTestId('practice-character')).toHaveText('日')
+  await answer.dispatchEvent('compositionend', { data: '日' })
+  await expect(page.getByTestId('practice-character')).toHaveText('月')
+})
+
+test('lookup, reverse lookup, favorites and practice navigation', async ({ page }) => {
+  await page.goto('./#/lookup?q=你好')
+  await expect(page.locator('.dictionary-row')).toHaveCount(2)
+  await page.getByRole('button', { name: '收藏 你', exact: true }).click()
+  const query = page.getByRole('searchbox')
+  await query.fill('snz')
+  await expect(
+    page
+      .locator('.dictionary-row')
+      .filter({ has: page.locator('.result-character', { hasText: '學' }) }),
+  ).toBeVisible()
+  await page.goto('./#/notebook')
+  await page.getByRole('button', { name: /^已收藏/ }).click()
+  await expect(page.locator('.note-card')).toContainText('你')
+  await page.getByRole('button', { name: '練習收藏' }).click()
+  await expect(page.getByTestId('practice-character')).toHaveText('你')
+  await page.goto('./#/lookup?q=你好')
+  await page.getByRole('button', { name: '練習這些字' }).click()
+  await expect(page.getByTestId('practice-character')).toHaveText('你')
+  await expect(page.locator('.article-text')).toContainText('你好')
+})
+
+test('local dictionary imports persist and invalid imports keep existing data', async ({
+  page,
+}) => {
+  await page.goto('./#/settings')
+  const file = page.getByLabel('選擇字碼表檔案')
+  await file.setInputFiles({
+    name: 'personal.cin',
+    mimeType: 'text/plain',
+    buffer: Buffer.from('%chardef begin\nzzzzzz 𠮷\n%chardef end'),
+  })
+  await expect(page.locator('.settings-panel [role="status"]')).toContainText('已匯入 1 個字元')
+  await file.setInputFiles({
+    name: 'bad.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from('[broken'),
+  })
+  await expect(page.locator('.settings-panel [role="status"]')).toContainText('JSON 格式不正確')
+  await page.goto('./#/lookup?q=𠮷')
+  await page.reload()
+  await expect(page.locator('.dictionary-row')).toContainText('𠮷')
+  await expect(page.locator('.code-group').first()).toHaveText('ZZZZZZ字碼')
+})
+
+test('mobile keyboard, safe area, install instructions and no horizontal overflow', async ({
+  page,
+}, testInfo) => {
+  await page.goto('./#/practice/shape')
+  await page.getByRole('button', { name: '輸入 O', exact: true }).click()
+  await expect(page.getByTestId('practice-character')).toHaveText('工')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  )
+  await expect(page.locator('meta[name="viewport"]')).toHaveAttribute(
+    'content',
+    /viewport-fit=cover/,
+  )
+  await page.getByRole('button', { name: '安裝與使用說明' }).click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await expect(page.getByRole('dialog')).toContainText('加入主畫面')
+  await page.getByRole('button', { name: '關閉安裝說明' }).click()
+  await page.getByRole('button', { name: '重新開始本回合' }).click()
+  await page.screenshot({
+    path: `test-results/${testInfo.project.name}-practice.png`,
+    fullPage: true,
+  })
+})
+
+test('PWA works offline including a route never previously opened', async ({
+  page,
+  context,
+  browserName,
+}) => {
+  const basePath = process.env.E2E_BASE_PATH || '/boshiamy-practice/'
+  // Playwright #42775: setOffline kills WebKit requests before SW handling.
+  // Use a real stopped origin on WebKit; Chromium also exercises setOffline.
+  const origin = await startStaticServer(basePath)
+  try {
+    await page.goto(`${origin.url}#/practice/shape`)
+    await page.evaluate(async () => {
+      await navigator.serviceWorker.ready
+      if (!navigator.serviceWorker.controller)
+        await new Promise<void>((resolve) =>
+          navigator.serviceWorker.addEventListener('controllerchange', () => resolve(), {
+            once: true,
+          }),
+        )
+    })
+    const manifestHref = await page.locator('link[rel="manifest"]').getAttribute('href')
+    const manifestUrl = new URL(manifestHref!, page.url()).href
+    const manifest = await (await page.request.get(manifestUrl)).json()
+    expect(manifest.display).toBe('standalone')
+    expect(manifest.scope).toBe(basePath)
+    for (const icon of manifest.icons)
+      expect((await page.request.get(new URL(icon.src, manifestUrl).href)).ok()).toBe(true)
+    await origin.stop()
+    if (browserName !== 'webkit') await context.setOffline(true)
+    const response = await page.reload()
+    expect(response?.fromServiceWorker()).toBe(true)
+    await expect(page.getByTestId('practice-character')).toHaveText('口')
+    await page.goto(`${origin.url}#/lookup?q=學`)
+    await expect(page.locator('.dictionary-row')).toContainText('學')
+  } finally {
+    await context.setOffline(false)
+    await origin.stop()
+  }
+})
+
+test('partial codes wait and complete answers advance without Enter', async ({ page }) => {
+  await page.goto('./#/practice/article?text=學習')
+  await expect(page.getByTestId('practice-character')).toHaveText('學')
+  const answer = page.getByLabel('輸入字根答案', { exact: true })
+  await answer.fill('sn')
+  // Let the automatic check settle: an incomplete, valid prefix must not count as wrong.
+  await page.waitForTimeout(650)
+  await expect(page.getByTestId('practice-character')).toHaveText('學')
+  await expect(answer).toHaveAttribute('aria-invalid', 'false')
+  await answer.fill('snz')
+  await expect(page.getByTestId('practice-character')).toHaveText('習')
+  await expect(answer).toBeFocused()
+  await answer.fill('ed')
+  await expect(page.locator('.completion-stats')).toContainText('100')
+})
+
+test('pending answer checks pause off-page and cannot leak into a restarted lesson', async ({
+  page,
+}) => {
+  await page.goto('./#/practice/shape')
+  await expect(page.getByTestId('practice-character')).toHaveText('口')
+  await page.clock.install()
+  await page.clock.pauseAt(new Date())
+  const answer = page.getByLabel('輸入字根答案', { exact: true })
+  await answer.fill('o')
+  await page
+    .getByRole('link', { name: /字碼查詢|查碼/ })
+    .filter({ visible: true })
+    .click()
+  await expect(page.getByRole('searchbox')).toBeVisible()
+  await page.clock.runFor(1500)
+  await page.goBack()
+  await expect(page.getByTestId('practice-character')).toHaveText('口')
+  await page.clock.runFor(250)
+  await expect(page.getByTestId('practice-character')).toHaveText('工')
+  await answer.fill('i')
+  await page.getByRole('button', { name: '重新開始本回合' }).click()
+  await page.clock.runFor(1500)
+  await expect(page.getByTestId('practice-character')).toHaveText('口')
+  await expect(page.locator('.session-summary')).toContainText('0 / 10 題')
+})
+
+test('correct answers switch directly with stable controls and no success prompt', async ({
+  page,
+}) => {
+  await page.goto('./#/practice/shape')
+  await expect(page.getByTestId('practice-character')).toHaveText('口')
+  await page.clock.install()
+  await page.clock.pauseAt(new Date())
+  const answer = page.getByLabel('輸入字根答案', { exact: true })
+  const keyboard = page.locator('.keyboard-wrap')
+  for (const [code, nextGlyph] of [
+    ['o', '工'],
+    ['i', '寸'],
+    ['a', '十'],
+  ]) {
+    await answer.fill(code!)
+    const inputBefore = await answer.boundingBox()
+    const keyboardBefore = await keyboard.boundingBox()
+    await page.clock.runFor(250)
+    await expect(page.getByTestId('practice-character')).toHaveText(nextGlyph!)
+    await expect(answer).toHaveValue('')
+    await expect(answer).toBeFocused()
+    await expect(page.locator('.hint-note')).toHaveCount(0)
+    await expect(page.locator('#answer-feedback')).not.toContainText('答對了')
+    await expect(page.getByRole('button', { name: '檢查', exact: true })).toBeVisible()
+    expect(await answer.boundingBox()).toEqual(inputBefore)
+    expect(await keyboard.boundingBox()).toEqual(keyboardBefore)
+  }
+  await expect(page.locator('.session-summary')).toContainText('3 / 10 題')
+})

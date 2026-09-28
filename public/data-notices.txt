@@ -1,0 +1,23 @@
+蝦米練習室 — 字碼資料來源與使用限制
+
+本網站供免費、非商業學習使用。內建資料為 liu57a_ersu 舊版碼表，
+不是現行官方 J / X2 完整字庫。查碼差異以行易官方為準。
+
+原始來源：
+https://github.com/chinese-opendesktop/cin-tables/blob/master/boshiamy.cin
+
+原始檔頭：
+#嘸蝦米 liu57a_ersu
+#社群網址: http://input.foruto.com/boshiamy/ 蝦米族樂園
+#商業公司: http://www.liu.com.tw/
+#copyright (c) 行易有限公司
+#格式轉換(無附加限制): 趙惟倫 <bluebat@member.fsf.org>, 2007
+#授權方式: Free for non-commercial use
+
+轉換後收錄 13,563 個字元，保留字碼對應、合併重複項目並依碼長排序。
+取得日期：2026-09-28。
+原檔 SHA-256：d5d2fb887e170e76db2df8cd5fde5f7934bbb6b51cb084cbabde5d6f189fae15
+
+嘸蝦米為行易有限公司之商標，本網站為非官方練習工具。
+字根教學參考：https://boshiamy.com/tutorial_beginner.php?page=2
+網站解說與三篇練習短文另行撰寫，未複製官方教學圖片。
