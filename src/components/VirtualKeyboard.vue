@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { CornerDownLeft, Delete } from '@lucide/vue'
-defineProps<{ value: string; disabled?: boolean }>()
+defineProps<{ value: string; disabled?: boolean; canSubmit: boolean; submitLabel: string }>()
 defineEmits<{ key: [key: string]; submit: []; backspace: [] }>()
 const rows = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm']
 </script>
@@ -31,8 +31,8 @@ const rows = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm']
       </button>
     </div>
     <div class="keyboard-row keyboard-actions">
-      <button type="button" class="key-space" :disabled="disabled" @click="$emit('submit')">
-        空白鍵檢查 <CornerDownLeft :size="15" />
+      <button type="button" class="key-space" :disabled="!canSubmit" @click="$emit('submit')">
+        {{ submitLabel }} <CornerDownLeft :size="15" />
       </button>
     </div>
   </div>

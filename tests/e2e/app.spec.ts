@@ -4,6 +4,7 @@ import { startStaticServer } from './static-server'
 test('root practice, wrong answer, hints and completion', async ({ page }) => {
   await page.goto('./#/practice/shape')
   await expect(page.getByTestId('practice-character')).toHaveText('口')
+  await page.getByRole('button', { name: '鍵盤輸入', exact: true }).click()
   const answer = page.getByLabel('輸入字根答案', { exact: true })
   await answer.fill('x')
   await expect(page.locator('#answer-feedback')).toContainText('再試一次')
@@ -40,6 +41,7 @@ test('all six route categories and complete word practice', async ({ page }) => 
   }
   await page.goto('./#/practice/words')
   await page.reload()
+  await page.getByRole('button', { name: '鍵盤輸入', exact: true }).click()
   const answer = page.getByLabel('輸入字根答案', { exact: true })
   await answer.fill('do')
   await expect(page.getByTestId('practice-character')).toHaveText('月')
@@ -104,6 +106,15 @@ test('local dictionary imports persist and invalid imports keep existing data', 
   await page.reload()
   await expect(page.locator('.dictionary-row')).toContainText('𠮷')
   await expect(page.locator('.code-group').first()).toHaveText('ZZZZZZ字碼')
+  await page.getByRole('button', { name: '練習這些字' }).click()
+  await expect(page.locator('.answer-slot')).toHaveCount(6)
+  await page.setViewportSize({ width: 320, height: 740 })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  )
+  for (let i = 0; i < 6; i++)
+    await page.getByRole('button', { name: '輸入 Z', exact: true }).click()
+  await expect(page.getByRole('heading', { name: '手感，又多了一點。' })).toBeVisible()
 })
 
 test('mobile keyboard, safe area, install instructions and no horizontal overflow', async ({
@@ -123,6 +134,11 @@ test('mobile keyboard, safe area, install instructions and no horizontal overflo
   await expect(page.getByRole('dialog')).toBeVisible()
   await expect(page.getByRole('dialog')).toContainText('加入主畫面')
   await page.getByRole('button', { name: '關閉安裝說明' }).click()
+  await page.getByRole('button', { name: '重新開始本回合' }).click()
+  await page.getByRole('button', { name: '先跳過' }).click()
+  await expect(page.getByRole('button', { name: '輸入 O', exact: true })).toBeDisabled()
+  await page.getByRole('button', { name: '下一題', exact: true }).click()
+  await expect(page.getByTestId('practice-character')).toHaveText('工')
   await page.getByRole('button', { name: '重新開始本回合' }).click()
   await page.screenshot({
     path: `test-results/${testInfo.project.name}-practice.png`,
@@ -173,6 +189,7 @@ test('PWA works offline including a route never previously opened', async ({
 test('partial codes wait and complete answers advance without Enter', async ({ page }) => {
   await page.goto('./#/practice/article?text=學習')
   await expect(page.getByTestId('practice-character')).toHaveText('學')
+  await page.getByRole('button', { name: '鍵盤輸入', exact: true }).click()
   const answer = page.getByLabel('輸入字根答案', { exact: true })
   await answer.fill('sn')
   // Let the automatic check settle: an incomplete, valid prefix must not count as wrong.
@@ -193,6 +210,7 @@ test('pending answer checks pause off-page and cannot leak into a restarted less
   await expect(page.getByTestId('practice-character')).toHaveText('口')
   await page.clock.install()
   await page.clock.pauseAt(new Date())
+  await page.getByRole('button', { name: '鍵盤輸入', exact: true }).click()
   const answer = page.getByLabel('輸入字根答案', { exact: true })
   await answer.fill('o')
   await page
@@ -219,20 +237,20 @@ test('correct answers switch directly with stable controls and no success prompt
   await expect(page.getByTestId('practice-character')).toHaveText('口')
   await page.clock.install()
   await page.clock.pauseAt(new Date())
-  const answer = page.getByLabel('輸入字根答案', { exact: true })
+  const answer = page.getByTestId('code-answer-slots')
   const keyboard = page.locator('.keyboard-wrap')
   for (const [code, nextGlyph] of [
     ['o', '工'],
     ['i', '寸'],
     ['a', '十'],
   ]) {
-    await answer.fill(code!)
+    await page.getByRole('button', { name: `輸入 ${code!.toUpperCase()}`, exact: true }).click()
     const inputBefore = await answer.boundingBox()
     const keyboardBefore = await keyboard.boundingBox()
     await page.clock.runFor(250)
     await expect(page.getByTestId('practice-character')).toHaveText(nextGlyph!)
-    await expect(answer).toHaveValue('')
-    await expect(answer).toBeFocused()
+    await expect(answer.locator('.answer-slot')).toHaveText([''])
+    await expect(page.locator('#practice-answer')).toHaveCount(0)
     await expect(page.locator('.hint-note')).toHaveCount(0)
     await expect(page.locator('#answer-feedback')).not.toContainText('答對了')
     await expect(page.getByRole('button', { name: '檢查', exact: true })).toBeVisible()
@@ -240,4 +258,60 @@ test('correct answers switch directly with stable controls and no success prompt
     expect(await keyboard.boundingBox()).toEqual(keyboardBefore)
   }
   await expect(page.locator('.session-summary')).toContainText('3 / 10 題')
+})
+
+test('web keyboard reserves code slots, supports corrections and preserves text when switching tools', async ({
+  page,
+}, testInfo) => {
+  await page.goto('./#/practice/article?text=學習')
+  await expect(page.getByTestId('practice-character')).toHaveText('學')
+  await page.clock.install()
+  await page.clock.pauseAt(new Date())
+  const slots = page.locator('.answer-slot')
+  const key = (letter: string) => page.getByRole('button', { name: `輸入 ${letter}`, exact: true })
+  await expect(slots).toHaveText(['', '', ''])
+  await expect(page.locator('#practice-answer')).toHaveCount(0)
+  await key('S').click()
+  await key('X').click()
+  await page.clock.runFor(250)
+  await expect(slots).toHaveText(['S', 'X', ''])
+  await expect(page.locator('#answer-feedback')).toContainText('再試一次')
+  await page.getByRole('button', { name: '刪除一碼', exact: true }).click()
+  await expect(slots).toHaveText(['S', '', ''])
+  await key('N').click()
+  await page.clock.runFor(250)
+  await expect(page.locator('#answer-feedback')).not.toContainText('再試一次')
+  await page.screenshot({
+    path: `test-results/${testInfo.project.name}-code-slots.png`,
+    fullPage: true,
+  })
+  await key('Z').click()
+  await page.clock.runFor(250)
+  await expect(page.getByTestId('practice-character')).toHaveText('習')
+  await expect(slots).toHaveText(['', ''])
+  await key('E').click()
+  await page.getByRole('button', { name: '鍵盤輸入', exact: true }).click()
+  const answer = page.getByLabel('輸入字根答案', { exact: true })
+  await expect(answer).toHaveValue('e')
+  await expect(answer).toBeFocused()
+  await expect(slots).toHaveCount(0)
+  await expect(page.locator('.virtual-keyboard')).toHaveCount(0)
+  await page.getByRole('button', { name: '網頁鍵盤', exact: true }).click()
+  await expect(slots).toHaveText(['E', ''])
+  await expect(page.locator('#practice-answer')).toHaveCount(0)
+  // The longer alternative EEPD remains available, expanding to four slots.
+  await key('E').click()
+  await key('P').click()
+  await expect(slots).toHaveText(['E', 'E', 'P', ''])
+  await key('D').click()
+  await page.clock.runFor(250)
+  await expect(page.getByRole('heading', { name: '手感，又多了一點。' })).toBeVisible()
+  await page.goto('./#/practice/words')
+  await page.getByRole('button', { name: '鍵盤輸入', exact: true }).click()
+  await page.reload()
+  await expect(page.getByLabel('輸入字根答案', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: '鍵盤輸入', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
 })

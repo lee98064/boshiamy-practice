@@ -45,6 +45,25 @@ export function usePracticePage() {
   const activeCategory = computed(() => categories.find((item) => item.id === category.value)!)
   const isRootCategory = computed(() => ['shape', 'sound', 'meaning'].includes(category.value))
   const hasAnswered = computed(() => status.value === 'correct' || status.value === 'skipped')
+  const answerMode = computed(() =>
+    saved.preferences.inputMode === 'text'
+      ? 'text'
+      : saved.preferences.showKeyboard
+        ? 'onscreen'
+        : 'keyboard',
+  )
+  const answerLength = computed(() => {
+    const codes = current.value?.codes || []
+    const matching = codes.find((code) => code.startsWith(input.value.toLowerCase()))
+    return Math.max(1, input.value.length, (matching || codes[0] || '').length)
+  })
+  const submitLabel = computed(() =>
+    status.value === 'skipped'
+      ? index.value + 1 === queue.value.length
+        ? '看結果'
+        : '下一題'
+      : '檢查',
+  )
   const sessionLabel = computed(() =>
     isReview.value ? '字本複習' : isRootCategory.value ? '字根練習' : '逐字練習',
   )
@@ -90,7 +109,14 @@ export function usePracticePage() {
     router.push({ name: 'practice', params: { category: value } })
   }
   function focusAnswer() {
-    nextTick(() => inputEl.value?.focus({ preventScroll: true }))
+    if (answerMode.value !== 'onscreen')
+      nextTick(() => inputEl.value?.focus({ preventScroll: true }))
+  }
+  function setAnswerMode(mode: 'onscreen' | 'keyboard' | 'text') {
+    composing.value = false
+    saved.preferences.inputMode = mode === 'text' ? 'text' : 'code'
+    if (mode !== 'text') saved.preferences.showKeyboard = mode === 'onscreen'
+    focusAnswer()
   }
   function submit() {
     if (composing.value) return
@@ -123,14 +149,20 @@ export function usePracticePage() {
     } else input.value = target.value
   }
   function virtualKey(key: string) {
-    if (!hasAnswered.value && input.value.length < 8) input.value += key
-    focusAnswer()
+    if (hasAnswered.value || answerMode.value !== 'onscreen') return
+    const value = input.value + key
+    if (
+      value.length <= answerLength.value ||
+      current.value?.codes.some((code) => code.startsWith(value))
+    )
+      input.value = value
   }
   function onCompositionEnd(event: Event) {
     composing.value = false
     onInput(event)
   }
   function backspace() {
+    if (hasAnswered.value) return
     input.value = input.value.slice(0, -1)
     focusAnswer()
   }
@@ -214,6 +246,10 @@ export function usePracticePage() {
     activeCategory,
     isRootCategory,
     hasAnswered,
+    answerMode,
+    answerLength,
+    submitLabel,
+    setAnswerMode,
     sessionLabel,
     navigate,
     makeLesson,

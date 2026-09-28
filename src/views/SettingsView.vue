@@ -93,8 +93,8 @@ function exportProgress() {
       </div>
       <div class="setting-row">
         <div>
-          <label for="show-keyboard">顯示螢幕鍵盤</label>
-          <p>直接點選英文字母，手機不必切換輸入法。</p>
+          <label for="show-keyboard">字根使用網頁鍵盤</label>
+          <p>開啟時一格一碼；關閉則使用一般輸入框。</p>
         </div>
         <input
           id="show-keyboard"

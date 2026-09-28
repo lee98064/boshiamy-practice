@@ -16,6 +16,7 @@ import {
 } from '@lucide/vue'
 import { articles, categories, wordSets } from '../data/lessons'
 import VirtualKeyboard from '../components/VirtualKeyboard.vue'
+import CodeAnswerSlots from '../components/CodeAnswerSlots.vue'
 import { usePracticePage } from '../composables/usePracticePage'
 const {
   saved,
@@ -44,6 +45,10 @@ const {
   activeCategory,
   isRootCategory,
   hasAnswered,
+  answerMode,
+  answerLength,
+  submitLabel,
+  setAnswerMode,
   sessionLabel,
   navigate,
   makeLesson,
@@ -218,59 +223,69 @@ const {
             <div class="answer-area">
               <div class="input-mode-control" role="group" aria-label="輸入方式">
                 <button
-                  :class="{ active: saved.preferences.inputMode === 'code' }"
-                  :aria-pressed="saved.preferences.inputMode === 'code'"
-                  @click="saved.preferences.inputMode = 'code'"
+                  :class="{ active: answerMode === 'onscreen' }"
+                  :aria-pressed="answerMode === 'onscreen'"
+                  @click="setAnswerMode('onscreen')"
                 >
-                  英文字根</button
+                  網頁鍵盤</button
                 ><button
-                  :class="{ active: saved.preferences.inputMode === 'text' }"
-                  :aria-pressed="saved.preferences.inputMode === 'text'"
-                  @click="saved.preferences.inputMode = 'text'"
+                  :class="{ active: answerMode === 'keyboard' }"
+                  :aria-pressed="answerMode === 'keyboard'"
+                  @click="setAnswerMode('keyboard')"
+                >
+                  鍵盤輸入</button
+                ><button
+                  :class="{ active: answerMode === 'text' }"
+                  :aria-pressed="answerMode === 'text'"
+                  @click="setAnswerMode('text')"
                 >
                   中文字
                 </button>
               </div>
-              <label class="sr-only" for="practice-answer">{{
-                saved.preferences.inputMode === 'code' ? '輸入字根答案' : '輸入中文字答案'
-              }}</label>
-              <div class="answer-input-row" :class="{ 'is-wrong': status === 'wrong' }">
-                <input
-                  id="practice-answer"
-                  ref="practice-answer"
-                  :value="input"
-                  :placeholder="saved.preferences.inputMode === 'code' ? '輸入字根' : '輸入中文字'"
-                  :readonly="hasAnswered"
-                  :maxlength="saved.preferences.inputMode === 'code' ? 8 : 4"
-                  :inputmode="
-                    saved.preferences.inputMode === 'code' && saved.preferences.showKeyboard
-                      ? 'none'
-                      : 'text'
-                  "
-                  autocomplete="off"
-                  autocapitalize="off"
-                  autocorrect="off"
-                  :spellcheck="false"
-                  :aria-invalid="status === 'wrong'"
-                  aria-describedby="answer-feedback"
-                  @input="onInput"
-                  @keydown="onKeydown"
-                  @compositionstart="composing = true"
-                  @compositionend="onCompositionEnd"
-                /><button
-                  class="primary-button answer-button"
-                  :disabled="!hasAnswered && !input.trim()"
-                  @click="submit"
-                >
-                  {{
-                    status === 'skipped'
-                      ? index + 1 === queue.length
-                        ? '看結果'
-                        : '下一題'
-                      : '檢查'
-                  }}<ArrowRight v-if="hasAnswered" :size="19" /><CornerDownLeft v-else :size="18" />
-                </button>
-              </div>
+              <CodeAnswerSlots
+                v-if="answerMode === 'onscreen'"
+                :value="input"
+                :length="answerLength"
+                :invalid="status === 'wrong'"
+                :disabled="hasAnswered"
+              />
+              <template v-else>
+                <label class="sr-only" for="practice-answer">{{
+                  saved.preferences.inputMode === 'code' ? '輸入字根答案' : '輸入中文字答案'
+                }}</label>
+                <div class="answer-input-row" :class="{ 'is-wrong': status === 'wrong' }">
+                  <input
+                    id="practice-answer"
+                    ref="practice-answer"
+                    :value="input"
+                    :placeholder="
+                      saved.preferences.inputMode === 'code' ? '輸入字根' : '輸入中文字'
+                    "
+                    :readonly="hasAnswered"
+                    :maxlength="saved.preferences.inputMode === 'code' ? 8 : 4"
+                    inputmode="text"
+                    autocomplete="off"
+                    autocapitalize="off"
+                    autocorrect="off"
+                    :spellcheck="false"
+                    :aria-invalid="status === 'wrong'"
+                    aria-describedby="answer-feedback"
+                    @input="onInput"
+                    @keydown="onKeydown"
+                    @compositionstart="composing = true"
+                    @compositionend="onCompositionEnd"
+                  /><button
+                    class="primary-button answer-button"
+                    :disabled="!hasAnswered && !input.trim()"
+                    @click="submit"
+                  >
+                    {{ submitLabel }}<ArrowRight v-if="hasAnswered" :size="19" /><CornerDownLeft
+                      v-else
+                      :size="18"
+                    />
+                  </button>
+                </div>
+              </template>
               <div id="answer-feedback" class="answer-feedback" :class="status" role="status">
                 <template v-if="status === 'wrong'"
                   >再試一次。{{
@@ -281,7 +296,9 @@ const {
                 ><template v-else-if="status === 'skipped'"
                   >已加入待複習。答案是 {{ current.codes[0]?.toUpperCase() }}。</template
                 ><template v-else
-                  ><span v-if="saved.preferences.inputMode === 'code'"
+                  ><span v-if="answerMode === 'onscreen'"
+                    >點選下方鍵盤，一格一碼，答對自動換題。</span
+                  ><span v-else-if="saved.preferences.inputMode === 'code'"
                     >切換英文輸入，答對後自動進入下一題。</span
                   ><span v-else>完成選字後自動對答，答對後自動下一題。</span></template
                 >
@@ -304,13 +321,12 @@ const {
                 查這個字 <Search :size="16" />
               </button>
             </div>
-            <div
-              v-if="saved.preferences.showKeyboard && saved.preferences.inputMode === 'code'"
-              class="keyboard-wrap"
-            >
+            <div v-if="answerMode === 'onscreen'" class="keyboard-wrap">
               <VirtualKeyboard
                 :value="input"
                 :disabled="hasAnswered"
+                :can-submit="hasAnswered || !!input.trim()"
+                :submit-label="submitLabel"
                 @key="virtualKey"
                 @backspace="backspace"
                 @submit="submit"
@@ -324,13 +340,7 @@ const {
           </div>
         </div>
         <div class="under-exercise">
-          <span><Keyboard :size="16" /> {{ sessionLabel }}，照自己的速度就好。</span
-          ><button
-            class="text-button"
-            @click="saved.preferences.showKeyboard = !saved.preferences.showKeyboard"
-          >
-            {{ saved.preferences.showKeyboard ? '收起鍵盤' : '顯示鍵盤' }}
-          </button>
+          <span><Keyboard :size="16" /> {{ sessionLabel }}，照自己的速度就好。</span>
         </div>
       </div>
       <aside class="learning-aside">
