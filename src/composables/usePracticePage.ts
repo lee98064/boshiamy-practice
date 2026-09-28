@@ -2,7 +2,7 @@ import { computed, nextTick, onActivated, onDeactivated, ref, useTemplateRef, wa
 import { useRoute, useRouter } from 'vue-router'
 import type { Category, Page } from '../types'
 import { articles, categories, roots, wordSets } from '../data/lessons'
-import { textExercises } from '../lib/dictionary'
+import { refreshExercise, textExercises } from '../lib/dictionary'
 import { useData } from './useData'
 import { usePractice } from './usePractice'
 
@@ -24,7 +24,8 @@ export function usePracticePage() {
     selectedWord = ref(category.value === 'idioms' ? '一心一意' : '日月'),
     customText = ref('')
   const isReview = ref(false),
-    missing = ref<string[]>([])
+    missing = ref<string[]>([]),
+    unverified = ref<string[]>([])
   const inputEl = useTemplateRef<HTMLInputElement>('practice-answer')
   const practice = usePractice(recordAttempt, recordSession, saved, addMistake)
   const {
@@ -73,6 +74,7 @@ export function usePracticePage() {
   function makeLesson() {
     isReview.value = false
     missing.value = []
+    unverified.value = []
     if (isRootCategory.value) {
       const pool = roots.filter((root) => root.category === category.value)
       practice.start(
@@ -98,6 +100,7 @@ export function usePracticePage() {
           : selectedWord.value
       const result = textExercises(content, dictionary.value)
       missing.value = result.missing
+      unverified.value = result.unverified
       practice.start(result.missing.length ? [] : result.exercises, category.value)
     }
   }
@@ -174,7 +177,15 @@ export function usePracticePage() {
     if (pendingReview.value?.length) {
       isReview.value = true
       missing.value = []
-      practice.start(pendingReview.value, 'words')
+      const exercises = pendingReview.value.map((item) => refreshExercise(item, dictionary.value))
+      unverified.value = [
+        ...new Set(
+          exercises
+            .filter((item) => !item.isRoot && !item.recommendedSource)
+            .map((item) => item.glyph),
+        ),
+      ]
+      practice.start(exercises, 'words')
       pendingReview.value = null
       return
     }
@@ -229,6 +240,7 @@ export function usePracticePage() {
     customText,
     isReview,
     missing,
+    unverified,
     composing,
     practice,
     queue,

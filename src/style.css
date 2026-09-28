@@ -597,6 +597,11 @@ main:focus {
   max-width: 386px;
   margin: 0 auto;
 }
+.unverified-code {
+  flex-basis: 100%;
+  font-size: 10px;
+  color: var(--muted);
+}
 .input-mode-control {
   display: flex;
   justify-content: center;

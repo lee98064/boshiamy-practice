@@ -135,7 +135,12 @@ function exportProgress() {
       <details>
         <summary>查看匯入格式</summary>
         <p>JSON 範例：</p>
-        <pre>[{ "char": "你", "codes": ["pns"] }]</pre>
+        <pre>[{ "char": "好", "codes": ["gz", "gzj"], "recommendedCodes": ["gzj"] }]</pre>
+        <p>
+          recommendedCodes 可選填，指定練習接受的字碼，且必須包含在 codes 中。
+          匯入後會標示「指定練習碼」，不代表已經官方核對。
+          未指定且沒有內建建議碼的字，會保留為「一般碼表」練習。
+        </p>
         <p>
           CIN 檔需包含 %chardef begin / end 區段，一行一組「字碼 文字」。僅支援
           UTF-8、單一字元，不匯入自訂詞語。
@@ -172,6 +177,7 @@ function exportProgress() {
           本網站為非官方、非商業練習工具。嘸蝦米為行易有限公司之商標。內建字碼來自公開的 liu57a_ersu
           碼表，標示「Free for non-commercial use」；資料較舊，請以官方現行查碼為準。
         </p>
+        <p>已另外核對內建教材等 159 字的官方建議碼。其餘文字仍可查碼與練習，並標示建議碼待核對。</p>
         <a
           href="https://github.com/chinese-opendesktop/cin-tables/blob/master/boshiamy.cin"
           target="_blank"

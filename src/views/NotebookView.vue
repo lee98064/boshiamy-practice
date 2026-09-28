@@ -5,6 +5,7 @@ import { Bookmark, RotateCcw, Trash2, BookOpen, CheckCircle2 } from '@lucide/vue
 import { useData } from '../composables/useData'
 import { categories } from '../data/lessons'
 import type { Exercise } from '../types'
+import { refreshExercise } from '../lib/dictionary'
 const router = useRouter()
 const { saved, dictionary, toggleFavorite, pendingReview } = useData()
 function review(exercises: Exercise[]) {
@@ -18,12 +19,16 @@ const tab = ref<'mistakes' | 'favorites' | 'history'>('mistakes')
 const favorites = computed(() =>
   saved.favorites.flatMap((char) => dictionary.value.filter((entry) => entry.char === char)),
 )
+const mistakes = computed(() =>
+  saved.mistakes.map((item) => refreshExercise(item, dictionary.value)),
+)
 const favoriteExercises = computed<Exercise[]>(() =>
   favorites.value.map((entry) => ({
     id: `char-${entry.char}`,
     glyph: entry.char,
-    codes: entry.codes,
-    hint: `第一碼是 ${entry.codes[0]?.[0]?.toUpperCase()}`,
+    codes: entry.recommendedCodes || entry.codes,
+    recommendedSource: entry.recommendedSource,
+    hint: `第一碼是 ${(entry.recommendedCodes?.[0] || entry.codes[0])?.[0]?.toUpperCase()}`,
     explanation: '從收藏裡挑出來，再熟悉一次。',
     isRoot: false,
   })),
@@ -50,14 +55,22 @@ const favoriteExercises = computed<Exercise[]>(() =>
     <template v-if="tab === 'mistakes'">
       <div v-if="saved.mistakes.length" class="section-heading">
         <p>答錯或跳過的題目會留在這裡，熟悉後可自行移除。</p>
-        <button class="primary-button compact" @click="review(saved.mistakes.slice())">
+        <button class="primary-button compact" @click="review(mistakes)">
           <RotateCcw :size="16" /> 複習全部
         </button>
       </div>
       <div v-if="saved.mistakes.length" class="notebook-grid">
-        <article v-for="item in saved.mistakes" :key="item.id" class="note-card">
+        <article v-for="item in mistakes" :key="item.id" class="note-card">
           <div>
-            <small>{{ item.isRoot ? '字根' : '單字' }}</small
+            <small>{{
+              item.isRoot
+                ? '字根'
+                : item.recommendedSource === 'official'
+                  ? '建議碼'
+                  : item.recommendedSource === 'imported'
+                    ? '指定練習碼'
+                    : '一般碼表'
+            }}</small
             ><button
               class="icon-button"
               :aria-label="`移除錯題 ${item.glyph}`"
@@ -87,7 +100,13 @@ const favoriteExercises = computed<Exercise[]>(() =>
       <div v-if="favorites.length" class="notebook-grid">
         <article v-for="entry in favorites" :key="entry.char" class="note-card">
           <div>
-            <small>收藏字</small
+            <small>{{
+              entry.recommendedSource === 'official'
+                ? '建議碼'
+                : entry.recommendedSource === 'imported'
+                  ? '指定練習碼'
+                  : '一般碼表'
+            }}</small
             ><button
               class="icon-button"
               :aria-label="`取消收藏 ${entry.char}`"
@@ -97,7 +116,9 @@ const favoriteExercises = computed<Exercise[]>(() =>
             </button>
           </div>
           <strong>{{ entry.char }}</strong
-          ><span class="note-code">{{ entry.codes[0]?.toUpperCase() }}</span
+          ><span class="note-code">{{
+            (entry.recommendedCodes?.[0] || entry.codes[0])?.toUpperCase()
+          }}</span
           ><button class="text-button" @click="lookup(entry.char)">查看全部字碼</button>
         </article>
       </div>

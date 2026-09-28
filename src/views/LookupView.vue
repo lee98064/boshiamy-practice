@@ -84,9 +84,17 @@ async function copy(char: string, codes: string[]) {
         <article v-for="entry in results.slice(0, limit)" :key="entry.char" class="dictionary-row">
           <span class="result-character">{{ entry.char }}</span>
           <div class="result-codes">
+            <span v-if="!entry.recommendedCodes?.length" class="unverified-code"
+              >建議碼待核對，以下為收錄字碼。</span
+            >
             <span v-for="(code, i) in entry.codes" :key="code" class="code-group"
               ><kbd v-for="(key, ki) in code" :key="ki">{{ key.toUpperCase() }}</kbd
-              ><small v-if="i === 0">字碼</small></span
+              ><small v-if="entry.recommendedCodes?.includes(code)">{{
+                entry.recommendedSource === 'imported' ? '指定碼' : '建議碼'
+              }}</small
+              ><small v-else-if="i === 0 || entry.recommendedCodes?.length">{{
+                entry.recommendedCodes?.length ? '其他碼' : '字碼'
+              }}</small></span
             >
           </div>
           <div class="result-actions">
@@ -132,7 +140,9 @@ async function copy(char: string, codes: string[]) {
       <div>
         <h2>認識一個字，從它的字根開始。</h2>
         <p>也可以一次貼上一句話，逐字查看收錄的拆碼。把還不熟的字收進字本，下次再練。</p>
-        <p class="fine-print">內建資料為 liu57a_ersu 舊版碼表，部分字碼可能與目前官方版本不同。</p>
+        <p class="fine-print">
+          內建查碼為 liu57a_ersu 舊版資料；練習使用另行核對的建議碼，未核對的字會明確標示。
+        </p>
       </div>
     </div>
     <footer class="data-footnote">

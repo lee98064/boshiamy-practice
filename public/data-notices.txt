@@ -21,3 +21,9 @@ https://github.com/chinese-opendesktop/cin-tables/blob/master/boshiamy.cin
 嘸蝦米為行易有限公司之商標，本網站為非官方練習工具。
 字根教學參考：https://boshiamy.com/tutorial_beginner.php?page=2
 網站解說與三篇練習短文另行撰寫，未複製官方教學圖片。
+
+建議碼核對：2026-09-28，另行核對 159 字，涵蓋全部內建教材與查碼範例。
+來源：https://boshiamy.com/liuquery.php
+僅採繁體欄明示「建議碼」的對應，不依碼長推定，不宣稱為完整官方碼表。
+已核對字碼優先呈現並用於練習；其餘標示待核對並保留一般碼表練習。
+核對紀錄不擴張原資料的使用授權，本站仍限免費、非商業學習。

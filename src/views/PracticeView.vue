@@ -28,6 +28,7 @@ const {
   customText,
   isReview,
   missing,
+  unverified,
   composing,
   practice,
   queue,
@@ -136,6 +137,10 @@ const {
     <div v-if="missing.length" class="inline-warning">
       字庫未收錄「{{ missing.join('、') }}」。請到偏好設定匯入碼表，或調整文章後重試。
     </div>
+    <div v-if="unverified.length" class="inline-warning" role="status">
+      「{{ unverified.join('、') }}」使用一般碼表練習，接受收錄字碼；建議碼尚未核對。
+      <button class="text-button" @click="openLookup(unverified.join(''))">查看這些字</button>
+    </div>
     <div class="practice-layout">
       <div class="practice-main">
         <div class="exercise-card">
@@ -196,7 +201,15 @@ const {
               >
             </div>
             <div class="exercise-instruction">
-              <span class="pill">{{ current.isRoot ? '字根聯想' : '完整字碼' }}</span
+              <span class="pill">{{
+                current.isRoot
+                  ? '字根聯想'
+                  : current.recommendedSource === 'official'
+                    ? '建議碼'
+                    : current.recommendedSource === 'imported'
+                      ? '指定練習碼'
+                      : '一般碼表'
+              }}</span
               ><span>{{
                 saved.preferences.inputMode === 'text'
                   ? '使用你的嘸蝦米輸入法，輸入這個字。'
@@ -290,7 +303,11 @@ const {
                 <template v-if="status === 'wrong'"
                   >再試一次。{{
                     saved.preferences.inputMode === 'code'
-                      ? '還沒想起來的話，可以看看提示。'
+                      ? current.recommendedSource === 'official'
+                        ? '本題請使用建議碼。'
+                        : current.recommendedSource === 'imported'
+                          ? '本題請使用匯入的指定練習碼。'
+                          : '還沒想起來的話，可以看看提示。'
                       : '送出的文字與題目不同。'
                   }}</template
                 ><template v-else-if="status === 'skipped'"
@@ -404,7 +421,7 @@ const {
             {{
               current?.isRoot
                 ? '字根不等於完整字碼。例如「口」字根是 O，完整字碼是 OO。'
-                : '完整碼與已收錄的簡碼都能作答。先練正確，速度自然會跟上。'
+                : '已核對的字依建議碼練習；未核對的字會標示一般碼表。'
             }}
           </p>
           <a

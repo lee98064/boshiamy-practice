@@ -1,5 +1,6 @@
 import { computed, reactive, ref, watch } from 'vue'
 import bundled from '../data/dictionary.json'
+import recommendations from '../data/recommended-codes.json'
 import type { Category, DictionaryEntry, Exercise, SessionRecord } from '../types'
 import { mergeDictionary } from '../lib/dictionary'
 import { localDate, readImported, readSavedData, saveImported, STORAGE_KEY } from '../lib/storage'
@@ -27,12 +28,16 @@ watch(
   },
   { deep: true },
 )
-const dictionary = computed(() =>
-  mergeDictionary(
-    Object.entries(bundled).map(([char, codes]) => ({ char, codes })),
-    imported.value,
-  ),
+const builtInDictionary = mergeDictionary(
+  Object.entries(bundled).map(([char, codes]) => ({ char, codes })),
+  Object.entries(recommendations).map(([char, recommendedCodes]) => ({
+    char,
+    codes: recommendedCodes,
+    recommendedCodes,
+    recommendedSource: 'official',
+  })),
 )
+const dictionary = computed(() => mergeDictionary(builtInDictionary, imported.value))
 const date = ref(localDate())
 function refreshDate() {
   date.value = localDate()

@@ -106,13 +106,36 @@ test('local dictionary imports persist and invalid imports keep existing data', 
   await page.reload()
   await expect(page.locator('.dictionary-row')).toContainText('𠮷')
   await expect(page.locator('.code-group').first()).toHaveText('ZZZZZZ字碼')
+  await expect(page.locator('.unverified-code')).toContainText('建議碼待核對')
   await page.getByRole('button', { name: '練習這些字' }).click()
+  await expect(page.locator('.exercise-instruction .pill')).toHaveText('一般碼表')
   await expect(page.locator('.answer-slot')).toHaveCount(6)
   await page.setViewportSize({ width: 320, height: 740 })
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   )
   for (let i = 0; i < 6; i++)
+    await page.getByRole('button', { name: '輸入 Z', exact: true }).click()
+  await expect(page.getByRole('heading', { name: '手感，又多了一點。' })).toBeVisible()
+  await page.goto('./#/settings')
+  await file.setInputFiles({
+    name: 'personal.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(
+      JSON.stringify([{ char: '𠮷', codes: ['z', 'zzzzzz'], recommendedCodes: ['zzzzzz'] }]),
+    ),
+  })
+  await expect(page.locator('.settings-panel [role="status"]')).toContainText('已匯入 1 個字元')
+  await page.goto('./#/lookup?q=𠮷')
+  await page.reload()
+  await expect(page.locator('.code-group').first()).toHaveText('ZZZZZZ指定碼')
+  await page.getByRole('button', { name: '練習這些字' }).click()
+  await expect(page.locator('.exercise-instruction .pill')).toHaveText('指定練習碼')
+  await expect(page.locator('.answer-slot')).toHaveCount(6)
+  await page.getByRole('button', { name: '輸入 Z', exact: true }).click()
+  await page.waitForTimeout(300)
+  await expect(page.getByTestId('practice-character')).toHaveText('𠮷')
+  for (let i = 1; i < 6; i++)
     await page.getByRole('button', { name: '輸入 Z', exact: true }).click()
   await expect(page.getByRole('heading', { name: '手感，又多了一點。' })).toBeVisible()
 })
@@ -199,7 +222,7 @@ test('partial codes wait and complete answers advance without Enter', async ({ p
   await answer.fill('snz')
   await expect(page.getByTestId('practice-character')).toHaveText('習')
   await expect(answer).toBeFocused()
-  await answer.fill('ed')
+  await answer.fill('eepd')
   await expect(page.locator('.completion-stats')).toContainText('100')
 })
 
@@ -288,7 +311,7 @@ test('web keyboard reserves code slots, supports corrections and preserves text 
   await key('Z').click()
   await page.clock.runFor(250)
   await expect(page.getByTestId('practice-character')).toHaveText('習')
-  await expect(slots).toHaveText(['', ''])
+  await expect(slots).toHaveText(['', '', '', ''])
   await key('E').click()
   await page.getByRole('button', { name: '鍵盤輸入', exact: true }).click()
   const answer = page.getByLabel('輸入字根答案', { exact: true })
@@ -297,10 +320,14 @@ test('web keyboard reserves code slots, supports corrections and preserves text 
   await expect(slots).toHaveCount(0)
   await expect(page.locator('.virtual-keyboard')).toHaveCount(0)
   await page.getByRole('button', { name: '網頁鍵盤', exact: true }).click()
-  await expect(slots).toHaveText(['E', ''])
+  await expect(slots).toHaveText(['E', '', '', ''])
   await expect(page.locator('#practice-answer')).toHaveCount(0)
-  // The longer alternative EEPD remains available, expanding to four slots.
+  // EE is a shortcut: wait for EEPD, keeping the four recommended-code slots.
   await key('E').click()
+  await page.clock.runFor(250)
+  await expect(page.getByTestId('practice-character')).toHaveText('習')
+  await expect(slots).toHaveText(['E', 'E', '', ''])
+  await expect(page.locator('#answer-feedback')).not.toContainText('再試一次')
   await key('P').click()
   await expect(slots).toHaveText(['E', 'E', 'P', ''])
   await key('D').click()
@@ -314,4 +341,86 @@ test('web keyboard reserves code slots, supports corrections and preserves text 
     'aria-pressed',
     'true',
   )
+})
+
+test('recommended codes control lookup, slots and checking without accepting shortcuts', async ({
+  page,
+}) => {
+  await page.goto('./#/lookup?q=好對的')
+  await expect(page.locator('.dictionary-row .code-group:first-of-type')).toHaveText([
+    'GZJ建議碼',
+    'FEBA建議碼',
+    'D建議碼',
+  ])
+  await page.getByRole('button', { name: '練習這些字' }).click()
+  await page.clock.install()
+  await page.clock.pauseAt(new Date())
+  const key = (letter: string) => page.getByRole('button', { name: `輸入 ${letter}`, exact: true })
+  await expect(page.locator('.exercise-instruction .pill')).toHaveText('建議碼')
+  await expect(page.locator('.answer-slot')).toHaveCount(3)
+  await key('G').click()
+  await key('Z').click()
+  await page.clock.runFor(300)
+  await expect(page.getByTestId('practice-character')).toHaveText('好')
+  await expect(page.locator('.answer-slot')).toHaveText(['G', 'Z', ''])
+  await expect(page.locator('#answer-feedback')).not.toContainText('再試一次')
+  await key('J').click()
+  await page.clock.runFor(300)
+  await expect(page.getByTestId('practice-character')).toHaveText('對')
+  await expect(page.locator('.answer-slot')).toHaveCount(4)
+  await key('A').click()
+  await page.clock.runFor(300)
+  await expect(page.getByTestId('practice-character')).toHaveText('對')
+  await expect(page.locator('#answer-feedback')).toContainText('本題請使用建議碼')
+  await page.getByRole('button', { name: '刪除一碼', exact: true }).click()
+  for (const letter of 'FEBA') await key(letter).click()
+  await page.clock.runFor(300)
+  await expect(page.getByTestId('practice-character')).toHaveText('的')
+  await expect(page.locator('.answer-slot')).toHaveCount(1)
+  await key('D').click()
+  await page.clock.runFor(300)
+  await expect(page.getByRole('heading', { name: '手感，又多了一點。' })).toBeVisible()
+})
+
+test('saved mistakes and favorites use current recommended codes', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      'boshiamy-practice:v1',
+      JSON.stringify({
+        version: 1,
+        favorites: ['好'],
+        mistakes: [
+          {
+            id: 'char-好',
+            glyph: '好',
+            codes: ['gz', 'gzj'],
+            isRoot: false,
+            hint: '舊提示',
+            explanation: '舊字碼',
+          },
+        ],
+      }),
+    )
+  })
+  await page.goto('./#/notebook')
+  await expect(page.locator('.note-card .note-code')).toHaveText('GZJ')
+  await expect(page.locator('.note-card small')).toHaveText('建議碼')
+  await page.getByRole('button', { name: '再練一次', exact: true }).click()
+  await expect(page.getByTestId('practice-character')).toHaveText('好')
+  await expect(page.locator('.answer-slot')).toHaveCount(3)
+  await page.getByRole('button', { name: '鍵盤輸入', exact: true }).click()
+  const answer = page.getByLabel('輸入字根答案', { exact: true })
+  await answer.fill('gz')
+  await page.waitForTimeout(300)
+  await expect(page.getByTestId('practice-character')).toHaveText('好')
+  await answer.fill('gzj')
+  await expect(page.getByRole('heading', { name: '手感，又多了一點。' })).toBeVisible()
+  await page.getByRole('button', { name: '查看我的字本' }).click()
+  await page.getByRole('button', { name: /^已收藏/ }).click()
+  await expect(page.locator('.note-card .note-code')).toHaveText('GZJ')
+  await page.getByRole('button', { name: '練習收藏' }).click()
+  await expect(page.locator('.exercise-instruction .pill')).toHaveText('建議碼')
+  await answer.fill('gz')
+  await page.waitForTimeout(300)
+  await expect(page.getByTestId('practice-character')).toHaveText('好')
 })

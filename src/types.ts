@@ -11,6 +11,8 @@ export interface Root {
 export interface DictionaryEntry {
   char: string
   codes: string[]
+  recommendedCodes?: string[]
+  recommendedSource?: 'official' | 'imported'
 }
 export interface Exercise {
   id: string
@@ -19,6 +21,7 @@ export interface Exercise {
   hint: string
   explanation: string
   isRoot: boolean
+  recommendedSource?: 'official' | 'imported'
   context?: string
   position?: number
 }

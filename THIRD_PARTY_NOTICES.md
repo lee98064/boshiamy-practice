@@ -2,7 +2,7 @@
 
 ## 嘸蝦米字碼資料
 
-`src/data/dictionary.json` 由 chinese-opendesktop/cin-tables 的 `boshiamy.cin` 轉換而來，保留單字、多種字碼與原始對應關係，合併重複項目，按碼長排序。
+`src/data/dictionary.json` 由 chinese-opendesktop/cin-tables 的 `boshiamy.cin` 轉換而來，保留單字、多種字碼與原始對應關係，合併重複項目，按碼長排序。這個排序不代表官方建議碼。
 
 - 來源：https://github.com/chinese-opendesktop/cin-tables/blob/master/boshiamy.cin
 - 取得日期：2026-09-28
@@ -24,6 +24,10 @@
 本專案依使用者指定，供免費、非商業學習。資料保留原有的非商業限制，不以程式碼授權取代，也不宣稱此碼表為不受限制的開源資料。商業用途應另取得權利人的適當授權或移除本資料。最新字碼與版本差異請以 [行易官方查碼](https://boshiamy.com/liuquery.php) 為準。
 
 嘸蝦米為行易有限公司之商標；本專案是非官方練習工具，與行易有限公司無隸屬關係。
+
+## 建議碼核對
+
+`src/data/recommended-codes.json` 另行記錄 159 個字的核對結果，包含全部內建教材用字與查碼範例。2026-09-28 逐批查閱 [行易官方查碼](https://boshiamy.com/liuquery.php)，僅採「繁體」欄中明示「建議碼」的字碼。這是有限教材範圍的事實對照，並非完整官方碼表，也不擴張原資料的使用授權。查詢時把這些已核對字碼排在其他碼之前；未核對的字不推測建議碼。方法與範圍見 [核對紀錄](docs/RECOMMENDED_CODES.md)。
 
 ## 教材
 
