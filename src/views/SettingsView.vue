@@ -3,6 +3,7 @@ import { inject, ref } from 'vue'
 import { Upload, Download, ArrowUpRight, CheckCircle2, Smartphone } from '@lucide/vue'
 import { useData } from '../composables/useData'
 import { parseDictionary } from '../lib/dictionary'
+import { sessionLengths } from '../lib/practice-deck'
 const openInstall = inject<() => void>('openInstall', () => {})
 const dataNoticesUrl = `${import.meta.env.BASE_URL}data-notices.txt`
 const { saved, imported, dictionary, importDictionary, notify } = useData()
@@ -84,11 +85,11 @@ function exportProgress() {
       </div>
       <div class="setting-row">
         <div>
-          <label for="session-length">字根每回合題數</label>
-          <p>不足題數時會重新輪替；文章會練完整篇。</p>
+          <label for="session-length">字根／單字每回合題數</label>
+          <p>同回合不重複，題庫較少時練完該範圍；文章會練完整篇。</p>
         </div>
         <select id="session-length" v-model="saved.preferences.sessionLength">
-          <option v-for="n in [5, 10, 20]" :key="n" :value="n">{{ n }} 題</option>
+          <option v-for="n in sessionLengths" :key="n" :value="n">{{ n }} 題</option>
         </select>
       </div>
       <div class="setting-row">
@@ -177,7 +178,10 @@ function exportProgress() {
           本網站為非官方、非商業練習工具。嘸蝦米為行易有限公司之商標。內建字碼來自公開的 liu57a_ersu
           碼表，標示「Free for non-commercial use」；資料較舊，請以官方現行查碼為準。
         </p>
-        <p>已另外核對內建教材等 159 字的官方建議碼。其餘文字仍可查碼與練習，並標示建議碼待核對。</p>
+        <p>
+          已另外核對詞語、成語與文章等 159
+          字的官方建議碼。其餘文字仍可查碼與練習，並標示建議碼待核對。
+        </p>
         <a
           href="https://github.com/chinese-opendesktop/cin-tables/blob/master/boshiamy.cin"
           target="_blank"

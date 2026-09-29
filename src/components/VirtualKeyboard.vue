@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { CornerDownLeft, Delete } from '@lucide/vue'
-defineProps<{ value: string; disabled?: boolean; canSubmit: boolean; submitLabel: string }>()
+defineProps<{
+  value: string
+  disabled?: boolean
+  canSubmit: boolean
+  submitLabel: string
+  specialKeys?: string[]
+}>()
 defineEmits<{ key: [key: string]; submit: []; backspace: [] }>()
 const rows = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm']
 </script>
@@ -28,6 +34,18 @@ const rows = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm']
         @click="$emit('backspace')"
       >
         <Delete :size="19" />
+      </button>
+    </div>
+    <div v-if="specialKeys?.length" class="keyboard-row special-keys">
+      <button
+        v-for="key in specialKeys"
+        :key="key"
+        type="button"
+        :aria-label="`輸入 ${key}`"
+        :disabled="disabled"
+        @click="$emit('key', key)"
+      >
+        {{ key }}
       </button>
     </div>
     <div class="keyboard-row keyboard-actions">

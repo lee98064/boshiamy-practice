@@ -6,10 +6,16 @@ export const router = createRouter({
   routes: [
     { path: '/', redirect: '/practice/shape' },
     {
-      path: '/practice/:category(shape|sound|meaning|words|idioms|article)?',
+      path: '/practice/:category(shape|sound|meaning|single|words|idioms|article)?',
       name: 'practice',
       component: PracticeView,
       meta: { title: '開始練習' },
+    },
+    {
+      path: '/roots',
+      name: 'roots',
+      component: () => import('../views/RootsView.vue'),
+      meta: { title: '字根表' },
     },
     {
       path: '/lookup',

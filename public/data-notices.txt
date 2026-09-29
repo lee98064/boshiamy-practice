@@ -20,7 +20,10 @@ https://github.com/chinese-opendesktop/cin-tables/blob/master/boshiamy.cin
 
 嘸蝦米為行易有限公司之商標，本網站為非官方練習工具。
 字根教學參考：https://boshiamy.com/tutorial_beginner.php?page=2
-網站解說與三篇練習短文另行撰寫，未複製官方教學圖片。
+網站解說與三篇練習短文另行撰寫。
+2026-09-30 新增字根資料依使用者提供的總表整理，變形字根以該附件字形呈現；
+原圖保留於 reference/root-chart.png，不擴張原圖授權，限非商業學習。
+346 筆為分類題目數，包含跨分類的同形與變形，並非唯一字根總數。
 
 建議碼核對：2026-09-28，另行核對 159 字，涵蓋全部內建教材與查碼範例。
 來源：https://boshiamy.com/liuquery.php

@@ -6,6 +6,7 @@ import { useData } from '../composables/useData'
 import { categories } from '../data/lessons'
 import type { Exercise } from '../types'
 import { refreshExercise } from '../lib/dictionary'
+import RootGlyph from '../components/RootGlyph.vue'
 const router = useRouter()
 const { saved, dictionary, toggleFavorite, pendingReview } = useData()
 function review(exercises: Exercise[]) {
@@ -79,7 +80,7 @@ const favoriteExercises = computed<Exercise[]>(() =>
               <CheckCircle2 :size="18" />
             </button>
           </div>
-          <strong>{{ item.glyph }}</strong
+          <strong><RootGlyph :glyph="item.glyph" :crop="item.rootCrop" /></strong
           ><span class="note-code">{{ item.codes[0]?.toUpperCase() }}</span
           ><button class="text-button" @click="review([item])">再練一次</button>
         </article>

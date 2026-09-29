@@ -6,7 +6,13 @@ export const defaults = (): SavedData => ({
   mistakes: [],
   attempts: [],
   sessions: [],
-  preferences: { showKeyboard: true, dailyGoal: 20, sessionLength: 10, inputMode: 'code' },
+  preferences: {
+    showKeyboard: true,
+    dailyGoal: 20,
+    sessionLength: 10,
+    inputMode: 'code',
+    singleScope: 'all',
+  },
 })
 export function readSavedData(): SavedData {
   const initial = defaults()
@@ -54,10 +60,11 @@ export function readSavedData(): SavedData {
         dailyGoal: [10, 20, 30, 50].includes(data.preferences?.dailyGoal)
           ? data.preferences.dailyGoal
           : 20,
-        sessionLength: [5, 10, 20].includes(data.preferences?.sessionLength)
+        sessionLength: [5, 10, 20, 50, 100].includes(data.preferences?.sessionLength)
           ? data.preferences.sessionLength
           : 10,
         inputMode: data.preferences?.inputMode === 'text' ? 'text' : 'code',
+        singleScope: data.preferences?.singleScope === 'recommended' ? 'recommended' : 'all',
       },
     }
   } catch {

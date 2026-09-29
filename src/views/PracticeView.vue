@@ -17,6 +17,8 @@ import {
 import { articles, categories, wordSets } from '../data/lessons'
 import VirtualKeyboard from '../components/VirtualKeyboard.vue'
 import CodeAnswerSlots from '../components/CodeAnswerSlots.vue'
+import RootGlyph from '../components/RootGlyph.vue'
+import PracticeSetup from '../components/PracticeSetup.vue'
 import { usePracticePage } from '../composables/usePracticePage'
 const {
   saved,
@@ -45,6 +47,10 @@ const {
   progress,
   activeCategory,
   isRootCategory,
+  rootKey,
+  poolSize,
+  specialKeys,
+  selectRootKey,
   hasAnswered,
   answerMode,
   answerLength,
@@ -95,15 +101,27 @@ const {
               ? '讀發音'
               : item.id === 'meaning'
                 ? '懂意思'
-                : item.id === 'words'
-                  ? '練日常'
-                  : item.id === 'idioms'
-                    ? '記四字'
-                    : '找節奏'
+                : item.id === 'single'
+                  ? '隨機抽字'
+                  : item.id === 'words'
+                    ? '練日常'
+                    : item.id === 'idioms'
+                      ? '記四字'
+                      : '找節奏'
         }}</small>
       </button>
     </div>
-    <div v-if="!isRootCategory && !isReview" class="lesson-picker">
+    <PracticeSetup
+      v-if="(isRootCategory || category === 'single') && !isReview"
+      :is-root="isRootCategory"
+      :root-key="rootKey"
+      :pool-size="poolSize"
+      v-model:session-length="saved.preferences.sessionLength"
+      v-model:single-scope="saved.preferences.singleScope"
+      @update:root-key="selectRootKey"
+      @shuffle="makeLesson"
+    />
+    <div v-if="!isRootCategory && category !== 'single' && !isReview" class="lesson-picker">
       <label :for="category === 'article' ? 'article-select' : 'word-select'"
         >選擇{{ category === 'article' ? '文章' : category === 'idioms' ? '成語' : '詞語' }}</label
       ><select
@@ -188,7 +206,7 @@ const {
               ><button class="secondary-button" @click="navigate('notebook')">查看我的字本</button>
             </div>
           </div>
-          <div v-else-if="current" class="exercise-body">
+          <div v-else-if="current" class="exercise-body" :data-exercise-id="current.id">
             <div v-if="current.context" class="article-text" aria-label="本題文章">
               <span
                 v-for="(char, i) in [...current.context]"
@@ -225,12 +243,19 @@ const {
             <div class="character-stage">
               <div class="character-grid">
                 <div class="grid-diagonal" aria-hidden="true"></div>
-                <span class="practice-character" data-testid="practice-character">{{
-                  current.glyph
-                }}</span>
+                <span
+                  class="practice-character"
+                  data-testid="practice-character"
+                  :aria-label="current.glyph"
+                  ><RootGlyph :glyph="current.glyph" :crop="current.rootCrop"
+                /></span>
               </div>
               <span class="character-caption">{{
-                current.isRoot ? '認識字根，先從輪廓開始。' : '一個字，一個字，慢慢來。'
+                current.rootCrop
+                  ? '變形字根，請輸入對應英文字母。'
+                  : current.isRoot
+                    ? '認識字根，先從輪廓開始。'
+                    : '一個字，一個字，慢慢來。'
               }}</span>
             </div>
             <div class="answer-area">
@@ -250,6 +275,7 @@ const {
                 ><button
                   :class="{ active: answerMode === 'text' }"
                   :aria-pressed="answerMode === 'text'"
+                  :disabled="!!current.rootCrop"
                   @click="setAnswerMode('text')"
                 >
                   中文字
@@ -334,13 +360,18 @@ const {
                 <Lightbulb :size="17" /> {{ hintShown ? '收起提示' : '給我一點提示' }}</button
               ><button v-if="!hasAnswered" class="text-button muted" @click="practice.skip()">
                 先跳過 <SkipForward :size="16" /></button
-              ><button v-else class="text-button muted" @click="openLookup(current.glyph)">
+              ><button
+                v-else-if="!current.rootCrop"
+                class="text-button muted"
+                @click="openLookup(current.glyph)"
+              >
                 查這個字 <Search :size="16" />
               </button>
             </div>
             <div v-if="answerMode === 'onscreen'" class="keyboard-wrap">
               <VirtualKeyboard
                 :value="input"
+                :special-keys="specialKeys"
                 :disabled="hasAnswered"
                 :can-submit="hasAnswered || !!input.trim()"
                 :submit-label="submitLabel"
@@ -352,8 +383,24 @@ const {
           </div>
           <div v-else class="empty-state">
             <BookOpen :size="36" />
-            <h2>準備一段想練習的文字。</h2>
-            <p>選擇一篇文章，或貼上自己的文字後開始。</p>
+            <h2>
+              {{
+                isRootCategory
+                  ? '這個分類沒有此鍵位的字根。'
+                  : category === 'single'
+                    ? '這個範圍還沒有可練習的字。'
+                    : '準備一段想練習的文字。'
+              }}
+            </h2>
+            <p>
+              {{
+                isRootCategory
+                  ? '切換其他鍵位，或選擇全部 A–Z。'
+                  : category === 'single'
+                    ? '切換全部字碼表，或到設定匯入字碼。'
+                    : '選擇一篇文章，或貼上自己的文字後開始。'
+              }}
+            </p>
           </div>
         </div>
         <div class="under-exercise">

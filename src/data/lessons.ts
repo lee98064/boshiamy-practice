@@ -1,4 +1,4 @@
-import type { Category, Root } from '../types'
+import type { Category } from '../types'
 
 export const categories: { id: Category; name: string; label: string; description: string }[] = [
   {
@@ -20,6 +20,12 @@ export const categories: { id: Category; name: string; label: string; descriptio
     description: '用英文與數字，連起字根的意思。',
   },
   {
+    id: 'single',
+    name: '單字',
+    label: '隨機抽字，練習拆碼',
+    description: '從字碼表抽出中文字，每回合不重複。',
+  },
+  {
     id: 'words',
     name: '詞語',
     label: '把字，連成生活',
@@ -39,66 +45,7 @@ export const categories: { id: Category; name: string; label: string; descriptio
   },
 ]
 
-const makeRoots = (category: Category, items: [string, string, string, string][]): Root[] =>
-  items.map(([glyph, code, hint, explanation]) => ({
-    id: `${category}-${glyph}`,
-    category,
-    glyph,
-    code,
-    hint,
-    explanation,
-  }))
-
-export const roots: Root[] = [
-  ...makeRoots('shape', [
-    [
-      '口',
-      'o',
-      '把四個角變圓，會像哪個字母？',
-      '「口」的封閉輪廓，可以聯想到字母 O。練習的是字根 O；輸入完整的「口」字則需要 OO。',
-    ],
-    ['工', 'i', '看看上下兩條橫線，中間還有一豎。', '「工」和有上下橫線的大寫 I，有相似的骨架。'],
-    ['寸', 'a', '把這個字根稍微斜著看。', '「寸」斜著看時，可聯想成 A 的輪廓。'],
-    ['十', 'j', '注意帶有橫畫的 J。', '「十」對應 J；練習時把這個交叉結構和鍵位連在一起。'],
-    ['乂', 'x', '兩條線交叉在一起。', '「乂」交叉的形狀，很像字母 X。'],
-    ['卩', 'p', '一條直線，右上角有個彎。', '「卩」的外形對應字母 P。'],
-    [
-      '弓',
-      'q',
-      '想像彎折的線，帶出一段尾巴。',
-      '「弓」是 Q 鍵的形狀字根，先記住整體，再辨認它的變形。',
-    ],
-    ['冂', 'n', '開口朝下的外框。', '「冂」像放大的小寫 n，對應 N 鍵。'],
-  ]),
-  ...makeRoots('sound', [
-    ['米', 'm', '念念看：ㄇㄧˇ。', '「米」的起音是 ㄇ，對應 M。'],
-    ['八', 'b', '念念看：ㄅㄚ。', '「八」的起音是 ㄅ，對應 B。'],
-    ['刀', 'd', '念念看：ㄉㄠ。', '「刀」的起音是 ㄉ，對應 D。'],
-    ['門', 'm', '念念看：ㄇㄣˊ。', '「門」和「米」一樣，由 ㄇ 的發音聯想到 M。'],
-    ['立', 'l', '念念看：ㄌㄧˋ。', '「立」的起音是 ㄌ，對應 L。'],
-    ['耳', 'r', '念念看：ㄦˇ。', '「耳」由 ㄦ 的發音聯想到 R。'],
-    ['文', 'w', '念念看：ㄨㄣˊ。', '「文」的起音是 ㄨ，對應 W。'],
-    ['月', 'u', '念念看：ㄩㄝˋ。', '「月」由 ㄩ 的發音聯想到 U。'],
-    ['皮', 'p', '念念看：ㄆㄧˊ。', '「皮」的起音是 ㄆ，對應 P。'],
-    ['西', 'c', '念「西」，再念英文字母 C。', '「西」的發音與 C 相近，因此取 C。'],
-    ['禾', 'h', '念念看：ㄏㄜˊ。', '「禾」的起音是 ㄏ，對應 H。'],
-    ['子', 'z', '念念看：ㄗˇ。', '「子」由 ㄗ 的發音聯想到 Z。'],
-  ]),
-  ...makeRoots('meaning', [
-    ['水', 'w', '水的英文是 water。', 'Water 的第一個字母 W，就是「水」的字根。'],
-    ['木', 't', '想想一棵 tree。', 'Tree 的第一個字母 T，對應「木」。'],
-    ['火', 'f', '火的英文是 fire。', 'Fire 的第一個字母 F，對應「火」。'],
-    ['女', 'g', '女孩的英文是 girl。', 'Girl 的第一個字母 G，對應「女」。'],
-    ['手', 'h', '手的英文是 hand。', 'Hand 的第一個字母 H，對應「手」。'],
-    ['心', 'h', '心的英文是 heart。', 'Heart 的第一個字母 H，對應「心」。'],
-    ['王', 'k', '國王的英文是 king。', 'King 的第一個字母 K，對應「王」。'],
-    ['車', 'c', '車的英文是 car。', 'Car 的第一個字母 C，對應「車」。'],
-    ['小', 's', '小的英文是 small。', 'Small 的第一個字母 S，對應「小」。'],
-    ['一', 'e', '從數目「一」連到 E。', '數字「一」對應 E，數字字根不需要補輔根。'],
-    ['三', 's', '念數字「三」，記住 S。', '數字「三」對應 S，也能延伸聯想到三點的結構。'],
-    ['四', 'f', '四的英文是 four。', 'Four 的第一個字母 F，對應「四」。'],
-  ]),
-]
+export { roots } from './roots'
 
 export const wordSets = {
   words: ['日月', '山水', '朋友', '生活', '學習', '文字', '時間', '初心', '自在', '森林'],

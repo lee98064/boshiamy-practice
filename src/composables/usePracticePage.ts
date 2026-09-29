@@ -5,6 +5,7 @@ import { articles, categories, roots, wordSets } from '../data/lessons'
 import { refreshExercise, textExercises } from '../lib/dictionary'
 import { useData } from './useData'
 import { usePractice } from './usePractice'
+import { createPracticeDeck, rootExercise, singleCharacterPool } from '../lib/practice-deck'
 
 export function usePracticePage() {
   const route = useRoute(),
@@ -45,6 +46,29 @@ export function usePracticePage() {
   } = practice
   const activeCategory = computed(() => categories.find((item) => item.id === category.value)!)
   const isRootCategory = computed(() => ['shape', 'sound', 'meaning'].includes(category.value))
+  const rootKey = ref(
+    typeof route.query.key === 'string' && /^[a-z]$/.test(route.query.key) ? route.query.key : '',
+  )
+  const rootPool = computed(() =>
+    roots.filter(
+      (root) => root.category === category.value && (!rootKey.value || root.code === rootKey.value),
+    ),
+  )
+  const characterPool = computed(() =>
+    singleCharacterPool(dictionary.value, saved.preferences.singleScope),
+  )
+  const poolSize = computed(() =>
+    isRootCategory.value ? rootPool.value.length : characterPool.value.length,
+  )
+  const decks = new Map<string, ReturnType<typeof createPracticeDeck>>()
+  function deck() {
+    const key = `${category.value}-${isRootCategory.value ? rootKey.value : saved.preferences.singleScope}`
+    if (!decks.has(key)) decks.set(key, createPracticeDeck())
+    return decks.get(key)!
+  }
+  const specialKeys = computed(() => [
+    ...new Set((current.value?.codes || []).join('').replace(/[a-z]/g, '')),
+  ])
   const hasAnswered = computed(() => status.value === 'correct' || status.value === 'skipped')
   const answerMode = computed(() =>
     saved.preferences.inputMode === 'text'
@@ -66,7 +90,13 @@ export function usePracticePage() {
       : '檢查',
   )
   const sessionLabel = computed(() =>
-    isReview.value ? '字本複習' : isRootCategory.value ? '字根練習' : '逐字練習',
+    isReview.value
+      ? '字本複習'
+      : isRootCategory.value
+        ? '字根練習'
+        : category.value === 'single'
+          ? '隨機單字'
+          : '逐字練習',
   )
   function navigate(name: Page) {
     router.push({ name })
@@ -76,21 +106,12 @@ export function usePracticePage() {
     missing.value = []
     unverified.value = []
     if (isRootCategory.value) {
-      const pool = roots.filter((root) => root.category === category.value)
       practice.start(
-        Array.from({ length: saved.preferences.sessionLength }, (_, i) => {
-          const root = pool[i % pool.length]!
-          return {
-            id: root.id,
-            glyph: root.glyph,
-            codes: [root.code],
-            hint: root.hint,
-            explanation: root.explanation,
-            isRoot: true,
-          }
-        }),
+        deck().draw(rootPool.value, saved.preferences.sessionLength).map(rootExercise),
         category.value,
       )
+    } else if (category.value === 'single') {
+      practice.start(deck().draw(characterPool.value, saved.preferences.sessionLength), 'single')
     } else {
       const content =
         category.value === 'article'
@@ -107,9 +128,19 @@ export function usePracticePage() {
   function selectCategory(value: Category) {
     if (value === category.value && !isReview.value) return
     category.value = value
+    rootKey.value = ''
     if (value === 'words' || value === 'idioms') selectedWord.value = wordSets[value][0]!
     makeLesson()
     router.push({ name: 'practice', params: { category: value } })
+  }
+  function selectRootKey(value: string) {
+    rootKey.value = value
+    makeLesson()
+    router.replace({
+      name: 'practice',
+      params: { category: category.value },
+      query: value ? { key: value } : {},
+    })
   }
   function focusAnswer() {
     if (answerMode.value !== 'onscreen')
@@ -198,14 +229,24 @@ export function usePracticePage() {
       return
     }
     const nextCategory = (route.params.category as Category) || category.value
-    if (nextCategory !== category.value) {
+    const nextKey =
+      typeof route.query.key === 'string' && /^[a-z]$/.test(route.query.key) ? route.query.key : ''
+    if (nextCategory !== category.value || nextKey !== rootKey.value) {
       category.value = nextCategory
+      rootKey.value = nextKey
       if (nextCategory === 'words' || nextCategory === 'idioms')
         selectedWord.value = wordSets[nextCategory][0]!
       makeLesson()
     }
   }
-  watch(() => [route.name, route.params.category, route.query.text], readRoute)
+  watch(() => [route.name, route.params.category, route.query.text, route.query.key], readRoute)
+  watch(
+    () => [current.value?.rootCrop, saved.preferences.inputMode],
+    () => {
+      if (current.value?.rootCrop && saved.preferences.inputMode === 'text')
+        saved.preferences.inputMode = 'code'
+    },
+  )
   watch(
     () => saved.preferences.inputMode,
     () => {
@@ -214,13 +255,13 @@ export function usePracticePage() {
     },
   )
   watch(
-    () => saved.preferences.sessionLength,
+    () => [saved.preferences.sessionLength, saved.preferences.singleScope],
     () => {
-      if (!isReview.value && isRootCategory.value) makeLesson()
+      if (!isReview.value && (isRootCategory.value || category.value === 'single')) makeLesson()
     },
   )
   watch(dictionary, () => {
-    if (!answered.value && !isReview.value) makeLesson()
+    if (!answered.value && !isReview.value && !isRootCategory.value) makeLesson()
   })
   onActivated(() => {
     practice.active.value = true
@@ -257,6 +298,10 @@ export function usePracticePage() {
     progress,
     activeCategory,
     isRootCategory,
+    rootKey,
+    poolSize,
+    specialKeys,
+    selectRootKey,
     hasAnswered,
     answerMode,
     answerLength,

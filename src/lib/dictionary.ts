@@ -137,7 +137,7 @@ export function textExercises(
   return { exercises, missing: [...new Set(missing)], unverified: [...new Set(unverified)] }
 }
 
-function exerciseFromEntry(entry: DictionaryEntry): Exercise {
+export function exerciseFromEntry(entry: DictionaryEntry): Exercise {
   const hasRecommendation = !!entry.recommendedCodes?.length
   const codes = hasRecommendation ? entry.recommendedCodes! : entry.codes
   return {

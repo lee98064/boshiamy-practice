@@ -20,6 +20,7 @@ const context = computed(
       lookup: '每個字，都有線索。',
       notebook: '把還不熟悉的，留給下一次。',
       settings: '留一點時間，給自己。',
+      roots: '一個鍵位，一組熟悉的輪廓。',
     })[String(route.name)] || '',
 )
 function focusMain() {
